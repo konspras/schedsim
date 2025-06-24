@@ -1,6 +1,7 @@
 package blocks
 
 import (
+	"fmt"
 	"math/rand"
 	"time"
 
@@ -60,6 +61,7 @@ type DDGenerator struct {
 
 // NewDDGenerator returns a DDGenerator
 func NewDDGenerator(waitTime, serviceTime float64) *DDGenerator {
+	fmt.Printf("NewDDGenerator called with waitTime: %v, serviceTime: %v\n", waitTime, serviceTime)
 	g := &DDGenerator{}
 	g.ServiceTime = newDeterministicDistr(serviceTime)
 	g.WaitTime = newDeterministicDistr(waitTime)
@@ -74,6 +76,7 @@ type MDGenerator struct {
 
 // NewMDGenerator returns a MDGenerator
 func NewMDGenerator(waitLambda float64, serviceTime float64) *MDGenerator {
+	fmt.Printf("NewMDGenerator called with waitLambda: %v, serviceTime: %v\n", waitLambda, serviceTime)
 	// Seed with time
 	rand.Seed(time.Now().UTC().UnixNano())
 
@@ -91,6 +94,7 @@ type MDRandGenerator struct {
 
 // NewMDRandGenerator returns a MDRandGenerator
 func NewMDRandGenerator(waitLambda float64, serviceTime float64) *MDRandGenerator {
+	fmt.Printf("NewMDRandGenerator called with waitLambda: %v, serviceTime: %v\n", waitLambda, serviceTime)
 	// Seed with time
 	rand.Seed(time.Now().UTC().UnixNano())
 
@@ -108,6 +112,7 @@ type MMGenerator struct {
 
 // NewMMGenerator returns a MMGenerator
 func NewMMGenerator(waitLambda float64, serviceMu float64) *MMGenerator {
+	fmt.Printf("NewMMGenerator called with waitLambda: %v, serviceMu: %v\n", waitLambda, serviceMu)
 	// Seed with time
 	rand.Seed(time.Now().UTC().UnixNano())
 
@@ -125,6 +130,7 @@ type MMRandGenerator struct {
 
 // NewMMRandGenerator returns a MMRandGenerator
 func NewMMRandGenerator(waitLambda float64, serviceMu float64) *MMRandGenerator {
+	fmt.Printf("NewMMRandGenerator called with waitLambda: %v, serviceMu: %v\n", waitLambda, serviceMu)
 	// Seed with time
 	rand.Seed(time.Now().UTC().UnixNano())
 
@@ -134,7 +140,7 @@ func NewMMRandGenerator(waitLambda float64, serviceMu float64) *MMRandGenerator 
 	return g
 }
 
-//MLNGenerator is exponential waiting time lognormal service time generator
+// MLNGenerator is exponential waiting time lognormal service time generator
 // If multiple queues they are fed round robin
 type MLNGenerator struct {
 	rRGenerator
@@ -142,6 +148,7 @@ type MLNGenerator struct {
 
 // NewMLNGenerator returns an MLNGenerator
 func NewMLNGenerator(waitLambda, mu, sigma float64) *MLNGenerator {
+	fmt.Printf("NewMLNGenerator called with waitLambda: %v, mu: %v, sigma: %v\n", waitLambda, mu, sigma)
 	// Seed with time
 	rand.Seed(time.Now().UTC().UnixNano())
 
@@ -160,6 +167,7 @@ type MBGenerator struct {
 
 // NewMBGenerator returns a MBGenerator
 func NewMBGenerator(waitLambda, peak1, peak2, ratio float64) *MBGenerator {
+	fmt.Printf("NewMBGenerator called with waitLambda: %v, peak1: %v, peak2: %v, ratio: %v\n", waitLambda, peak1, peak2, ratio)
 	// Seed with time
 	rand.Seed(time.Now().UTC().UnixNano())
 
@@ -178,6 +186,7 @@ type MBRandGenerator struct {
 
 // NewMBRandGenerator returns a new MBRandGenerator
 func NewMBRandGenerator(waitLambda, peak1, peak2, ratio float64) *MBRandGenerator {
+	fmt.Printf("NewMBRandGenerator called with waitLambda: %v, peak1: %v, peak2: %v, ratio: %v\n", waitLambda, peak1, peak2, ratio)
 	// Seed with time
 	rand.Seed(time.Now().UTC().UnixNano())
 

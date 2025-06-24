@@ -9,7 +9,7 @@ import (
 
 // SingleQueue implement a single-generator-multiprocessor topology with a single
 // queue. Each processor just dequeues from this queue
-func SingleQueue(lambda, mu, duration float64, genType, procType int) {
+func SingleQueue(lambda, mu, duration float64, genType, procType int, quantum float64, cores int, ctxCost float64) {
 
 	engine.InitSim()
 
@@ -39,7 +39,7 @@ func SingleQueue(lambda, mu, duration float64, genType, procType int) {
 
 	if procType == 0 {
 		for i := 0; i < cores; i++ {
-			p := &blocks.RTCProcessor{}
+			p := blocks.NewRTCProcessor(ctxCost)
 			p.AddInQueue(q)
 			p.SetReqDrain(stats)
 			engine.RegisterActor(p)
@@ -50,6 +50,13 @@ func SingleQueue(lambda, mu, duration float64, genType, procType int) {
 		p.AddInQueue(q)
 		p.SetReqDrain(stats)
 		engine.RegisterActor(p)
+	} else if procType == 2 {
+		for i := 0; i < cores; i++ {
+			p := blocks.NewTSProcessor(quantum, ctxCost)
+			p.AddInQueue(q)
+			p.SetReqDrain(stats)
+			engine.RegisterActor(p)
+		}
 	}
 
 	g.AddOutQueue(q)
@@ -57,6 +64,10 @@ func SingleQueue(lambda, mu, duration float64, genType, procType int) {
 	// Register the generator
 	engine.RegisterActor(g)
 
-	fmt.Printf("Cores:%v\tservice_rate:%v\tinterarrival_rate:%v\n", cores, mu, lambda)
+	fmt.Printf("Cores:%v\tservice_rate:%v\tinterarrival_rate:%v", cores, mu, lambda)
+	if procType == 2 {
+		fmt.Printf("\tquantum:%v", quantum)
+	}
+	fmt.Println()
 	engine.Run(duration)
 }

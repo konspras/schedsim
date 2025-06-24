@@ -9,7 +9,7 @@ import (
 
 // MultiQueue describes a single-generator-multi-processor topology where every
 // processor has its own incoming queue
-func MultiQueue(lambda, mu, duration float64, genType, procType int) {
+func MultiQueue(lambda, mu, duration float64, genType, procType int, cores int, ctxCost float64) {
 
 	engine.InitSim()
 
@@ -45,7 +45,7 @@ func MultiQueue(lambda, mu, duration float64, genType, procType int) {
 	// first the slow cores
 	for i := 0; i < cores; i++ {
 		if procType == 0 {
-			processors[i] = &blocks.RTCProcessor{}
+			processors[i] = blocks.NewRTCProcessor(ctxCost)
 		} else if procType == 1 {
 			processors[i] = blocks.NewPSProcessor()
 		}

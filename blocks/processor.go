@@ -12,7 +12,6 @@ import (
 type Processor interface {
 	engine.ActorInterface
 	SetReqDrain(rd RequestDrain) // We might want to specify different drains for different processors or use the same drain for all
-	SetCtxCost(cost float64)
 }
 
 // generic processor: All processors should have it as an embedded field
@@ -26,14 +25,15 @@ func (p *genericProcessor) SetReqDrain(rd RequestDrain) {
 	p.reqDrain = rd
 }
 
-func (p *genericProcessor) SetCtxCost(cost float64) {
-	p.ctxCost = cost
-}
-
 // RTCProcessor is a run to completion processor
 type RTCProcessor struct {
 	genericProcessor
 	scale float64
+}
+
+// NewRTCProcessor returns a new *RTCProcessor
+func NewRTCProcessor(ctxCost float64) *RTCProcessor {
+	return &RTCProcessor{genericProcessor: genericProcessor{ctxCost: ctxCost}}
 }
 
 // Run is the main processor loop
@@ -55,8 +55,8 @@ type TSProcessor struct {
 }
 
 // NewTSProcessor returns a new *TSProcessor
-func NewTSProcessor(quantum float64) *TSProcessor {
-	return &TSProcessor{quantum: quantum}
+func NewTSProcessor(quantum, ctxCost float64) *TSProcessor {
+	return &TSProcessor{quantum: quantum, genericProcessor: genericProcessor{ctxCost: ctxCost}}
 }
 
 // Run is the main processor loop

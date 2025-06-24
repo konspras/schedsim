@@ -8,9 +8,12 @@
 * --topo: single queue (0), multi queue (1), bounded queue (2)
 * --mu: service rate per core [reqs/us]
 * --lambda: arrival rate [reqs/us]
-* --genType: MM (0), MD (1), MB[90-10] (2),  MB[99.9-0.1] (3)
-* --procType: FIFO processing - number of cores from common.go (0), Processor sharing (1)
-
+* --cores: number of processor cores (default: 1)
+* --genType: MM (0), MD (1), MB[90-10] (2), MB[99.9-0.1] (3)
+* --procType: FIFO (0), Processor sharing (1), Time Sharing (2)
+* --quantum: quantum for Time Sharing processor [us] (default: 10.0)
+* --ctxCost: absolute context switch cost [us] (default: 0.0)
+ 
 #### Examples
 `./schedsim --topo=0 --mu=0.1 --lambda=0.005 --genType=2 --procType=0`
 
@@ -37,8 +40,8 @@ Add schedsim to path:
 Example: 
 
 `./scripts/run_new.py "single_queue"`
+### Running for multiple arrival rates (generates CSV automatically)
+`python3 ./scripts/run_many.py run --topo=0 --mu=0.1 --gen_type=1 --proc_type=0 --cores=10 --ctx_cost=0.0 --output_dir="results"`
 
-### Running for multiple arrival rates (partial implementation)
-`python3 ./scripts/run_many.py run --topo=0 --mu=0.1 --gen_type=1 --proc_type=0 --num_cores=10`
-
-`python3 ./scripts/run_many.py csv`
+### Running quantum sweep (generates CSV automatically)
+`python3 ./scripts/run_many.py run_quantum --topo=0 --mu=0.1 --gen_type=1 --proc_type=2 --cores=10 --ctx_cost=0.0 --output_dir="results"`

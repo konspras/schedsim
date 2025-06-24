@@ -1,0 +1,5 @@
+python3 ./scripts/run_many.py run_quantum --topo=0 --mu=0.1 --gen_type=0 --proc_type=2 --cores=1 --load_level=0.9 --ctx_cost=2
+
+python3 ./scripts/run_many.py csv_quantum
+
+python3 ./scripts/plot_csv.py --csv_files="['out_quantum.csv']" --x_axis_column Quantum --y_axis_columns="['50th','99th']" --ymax=200

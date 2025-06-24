@@ -7,7 +7,7 @@ import (
 	"github.com/epfl-dcsl/schedsim/engine"
 )
 
-func BoundedQueue(lambda, mu, duration float64, bufferSize int) {
+func BoundedQueue(lambda, mu, duration float64, bufferSize int, cores int) {
 
 	engine.InitSim()
 
