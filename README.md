@@ -45,3 +45,9 @@ Example:
 
 ### Running quantum sweep (generates CSV automatically)
 `python3 ./scripts/run_many.py run_quantum --topo=0 --mu=0.1 --gen_type=1 --proc_type=2 --cores=10 --ctx_cost=0.0 --output_dir="results"`
+
+### Plotting Results
+`python3 ./scripts/plot_csv.py --csv_files="['results/load_topo0_mu0.1_gen1_proc0_cores10_ctx0.0.csv']" --x_axis_column Interarrival_Rate --y_axis_columns="['50th','99th']" --ymax=200`
+
+### Plotting Detailed Latency vs. Service Time
+`python3 ./scripts/plot_csv.py --csv_files="['results/detailed_latency_load_topo0_mu0.1_gen1_proc0_cores10_ctx0.0.csv']" --x_axis_column ServiceTime --y_axis_columns="['Delay']" --plot_type="scatter" --ymax=200`

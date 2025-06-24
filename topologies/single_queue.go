@@ -28,6 +28,8 @@ func SingleQueue(lambda, mu, duration float64, genType, procType int, quantum fl
 		g = blocks.NewMBRandGenerator(lambda, 1, 10*(1/mu-0.9), 0.9)
 	} else if genType == 3 {
 		g = blocks.NewMBRandGenerator(lambda, 1, 1000*(1/mu-0.999), 0.999)
+	} else if genType == 4 { // --mu=0.0263157
+		g = blocks.NewMBRandGenerator(lambda, 20, 10*(1/mu-18), 0.9)
 	}
 
 	g.SetCreator(&blocks.SimpleReqCreator{})

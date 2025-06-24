@@ -20,10 +20,16 @@ type RequestDrain interface {
 	SetName(name string)
 }
 
+// RequestData stores the service time and delay for a single request.
+type RequestData struct {
+	ServiceTime float64
+	Delay       float64
+}
+
 // AllKeeper implements the RequestDrain interface and caclulates statistics
 // on all the given requests, without sampling
 type AllKeeper struct {
-	items       []float64
+	items       []RequestData // Changed to store RequestData
 	name        string
 	stolenCount int
 }
@@ -31,8 +37,19 @@ type AllKeeper struct {
 // TerminateReq is the function called by the processor after finishing
 // request processing
 func (k *AllKeeper) TerminateReq(req engine.ReqInterface) {
-	d := req.GetDelay()
-	k.items = append(k.items, d)
+	delay := req.GetDelay()
+
+	// Default to remaining service time for backward compatibility
+	var serviceTime float64
+	// Check if the request has an original service time we can get.
+	if reqWithOriginalTime, ok := req.(OriginalServiceTimeGetter); ok {
+		serviceTime = reqWithOriginalTime.GetOriginalServiceTime()
+	} else {
+		// Fallback for older request types that don't track original time
+		serviceTime = req.GetServiceTime()
+	}
+
+	k.items = append(k.items, RequestData{ServiceTime: serviceTime, Delay: delay})
 	if stealable, ok := req.(*StealableReq); ok {
 		if stealable.stolen {
 			k.stolenCount++
@@ -47,26 +64,35 @@ func (k *AllKeeper) SetName(name string) {
 
 func (k *AllKeeper) avg() float64 {
 	tmp := 0.0
-	for _, v := range k.items {
-		tmp += v
+	for _, item := range k.items {
+		tmp += item.Delay // Operate on Delay
 	}
 	return tmp / float64(len(k.items))
 }
 
 func (k *AllKeeper) std() float64 {
 	tmp := 0.0
-	for _, v := range k.items {
-		tmp += v * v
+	for _, item := range k.items {
+		tmp += item.Delay * item.Delay // Operate on Delay
 	}
 	return math.Sqrt((tmp/float64(len(k.items)) - k.avg()))
 }
 
 func (k *AllKeeper) getPercentiles() map[float64]float64 {
 	res := make(map[float64]float64)
-	sort.Float64s(k.items)
+	// Create a temporary slice of delays to sort for percentiles
+	delays := make([]float64, len(k.items))
+	for i, item := range k.items {
+		delays[i] = item.Delay
+	}
+	sort.Float64s(delays)
+
 	for _, v := range []float64{0.5, 0.9, 0.95, 0.99} {
-		idx := int(float64(len(k.items)) * v)
-		res[v] = k.items[idx]
+		idx := int(float64(len(delays)) * v)
+		if idx >= len(delays) {
+			idx = len(delays) - 1
+		} // Handle edge case for 99th percentile if few items
+		res[v] = delays[idx]
 	}
 	return res
 }
@@ -86,6 +112,17 @@ func (k *AllKeeper) PrintStats() {
 		}
 	}
 	fmt.Printf("%v\n", float64(len(k.items))/engine.GetTime())
+	k.PrintDetailedLatencyVsServiceTime()
+}
+
+// PrintDetailedLatencyVsServiceTime prints each request's service time and delay.
+func (k *AllKeeper) PrintDetailedLatencyVsServiceTime() {
+	fmt.Println("---DETAILED_LATENCY_VS_SERVICE_TIME_DATA_START---")
+	fmt.Println("ServiceTime,Delay") // CSV header
+	for _, item := range k.items {
+		fmt.Printf("%v,%v\n", item.ServiceTime, item.Delay)
+	}
+	fmt.Println("---DETAILED_LATENCY_VS_SERVICE_TIME_DATA_END---")
 }
 
 // MonitorKeeper keeps statistics about queue lengths
@@ -171,7 +208,7 @@ func (hdr *histogram) stddev() float64 {
 	return math.Sqrt(squareAvg - mean*mean)
 }
 
-//FIXME: I assume that in every bucket there will be max one percentile
+// FIXME: I assume that in every bucket there will be max one percentile
 func (hdr *histogram) getPercentiles() map[float64]float64 {
 	accum := make([]int, bUCKETCOUNT)
 	res := map[float64]float64{}
