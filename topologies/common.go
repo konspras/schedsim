@@ -1,5 +1,5 @@
 package topologies
 
 const (
-	cores = 1
+	cores = 4
 )

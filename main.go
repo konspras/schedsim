@@ -9,11 +9,11 @@ import (
 
 func main() {
 	var topo = flag.Int("topo", 0, "topology selector")
-	var mu = flag.Float64("mu", 0.02, "mu service rate") // default 50usec
-	var lambda = flag.Float64("lambda", 0.005, "lambda poisson interarrival")
+	var mu = flag.Float64("mu", 0.02, "mu service rate [reqs/us]") // default 50usec
+	var lambda = flag.Float64("lambda", 0.005, "lambda poisson interarrival [reqs/us]")
 	var genType = flag.Int("genType", 0, "type of generator")
 	var procType = flag.Int("procType", 0, "type of processor")
-	var duration = flag.Float64("duration", 10000000, "experiment duration")
+	var duration = flag.Float64("duration", 10000000, "experiment duration [us]")
 	var bufferSize = flag.Int("buffersize", 1, "size of the bounded buffer")
 
 	flag.Parse()
