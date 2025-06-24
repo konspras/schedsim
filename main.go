@@ -25,7 +25,7 @@ func main() {
 	if *topo == 0 {
 		topologies.SingleQueue(*lambda, *mu, *duration, *genType, *procType, *quantum, *cores, *ctxCost)
 	} else if *topo == 1 {
-		topologies.MultiQueue(*lambda, *mu, *duration, *genType, *procType, *cores, *ctxCost)
+		topologies.MultiQueue(*lambda, *mu, *duration, *genType, *procType, *quantum, *cores, *ctxCost)
 	} else if *topo == 2 {
 		topologies.BoundedQueue(*lambda, *mu, *duration, *bufferSize, *cores)
 	} else {

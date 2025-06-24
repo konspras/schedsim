@@ -9,7 +9,7 @@ import (
 
 // MultiQueue describes a single-generator-multi-processor topology where every
 // processor has its own incoming queue
-func MultiQueue(lambda, mu, duration float64, genType, procType int, cores int, ctxCost float64) {
+func MultiQueue(lambda, mu, duration float64, genType, procType int, quantum float64, cores int, ctxCost float64) {
 
 	engine.InitSim()
 
@@ -48,6 +48,8 @@ func MultiQueue(lambda, mu, duration float64, genType, procType int, cores int, 
 			processors[i] = blocks.NewRTCProcessor(ctxCost)
 		} else if procType == 1 {
 			processors[i] = blocks.NewPSProcessor()
+		} else if procType == 2 {
+			processors[i] = blocks.NewTSProcessor(quantum, ctxCost)
 		}
 	}
 
@@ -66,6 +68,10 @@ func MultiQueue(lambda, mu, duration float64, genType, procType int, cores int, 
 	// Register the generator
 	engine.RegisterActor(g)
 
-	fmt.Printf("Cores:%v\tservice_rate:%v\tinterarrival_rate:%v\n", cores, mu, lambda)
+	fmt.Printf("Cores:%v\tservice_rate:%v\tinterarrival_rate:%v", cores, mu, lambda)
+	if procType == 2 {
+		fmt.Printf("\tquantum:%v", quantum)
+	}
+	fmt.Println()
 	engine.Run(duration)
 }
