@@ -13,7 +13,8 @@ from pprint import pprint
 # Only written for single Q
 load_levels = [0.01, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.99]
 # Add quantums to sweep for TS processors
-quantums_to_sweep = [1.0, 5.0, 10.0, 20.0, 50.0, 100.0, 500.0]
+quantums_to_sweep = [500.0]
+# quantums_to_sweep = [1.0, 5.0, 10.0, 20.0, 50.0, 100.0, 500.0]
 metrics = ['Count', 'Stolen', 'AVG', 'STDDev',
            '50th', '90th', '95th', '99th', 'Reqs/time_unit']
 

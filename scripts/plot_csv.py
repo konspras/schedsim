@@ -5,6 +5,7 @@ import numpy as np
 import os
 import sys # Keep for warnings/errors
 import re # For parsing filenames
+import util
 
 # Example call
 # python3 ./scripts/plot_csv.py --csv_files="['out_quantum.csv']" --x_axis_column Quantum --y_axis_columns="['50th','99th']" --ymax=200
@@ -77,11 +78,9 @@ def _plot_detailed_scatter(csv_files, topo, mu, gen_type, proc_type, cores, ctx_
         # Extract lambda or quantum from filename for label
         label_suffix = ""
         if is_quantum_sweep:
-            match_val = re.search(r'_quantum(\d+\.?\d*)\.csv$', os.path.basename(csv_file))
-            if match_val: label_suffix = f" (Q={float(match_val.group(1)):.1f})"
+            label_suffix = f" (Q={float(_extract_numerical_param_from_filename(csv_file)):.1f})"
         else: # Load sweep
-            match_val = re.search(r'_lambda(\d+\.?\d*)\.csv$', os.path.basename(csv_file))
-            if match_val: label_suffix = f" (λ={float(match_val.group(1)):.4f})"
+            label_suffix = f" (λ={float(_extract_numerical_param_from_filename(csv_file)):.4f})"
 
         plt.scatter(df['ServiceTime'], df['Delay'], s=5, alpha=0.3, label=f"{os.path.basename(csv_file).split('_lambda')[0].split('_quantum')[0]}{label_suffix}")
     
@@ -170,6 +169,26 @@ def _plot_detailed_cdfs(csv_files, topo, mu, gen_type, proc_type, cores, ctx_cos
                 print(f"No data for {plot_filename_prefix} plot (P{p_val}+ Delay).")
             plt.close()
 
+def _plot_service_time(csv_files, topo, mu, gen_type, proc_type, cores, ctx_cost, output_dir, is_quantum_sweep=False):
+    """Plots the service time CDF."""
+    if not csv_files:
+        print("No detailed CSV files found for scatter plot.", file=sys.stderr)
+        return
+
+    plt.figure(figsize=(12, 8))
+    for csv_file in csv_files:
+        df = pd.read_csv(csv_file)
+        
+        # Extract lambda or quantum from filename for label
+        label_suffix = ""
+        if is_quantum_sweep:
+            label_suffix = f" (Q={float(_extract_numerical_param_from_filename(csv_file)):.1f})"
+        else: # Load sweep
+            label_suffix = f" (λ={float(_extract_numerical_param_from_filename(csv_file)):.4f})"
+        exp_plot_dir = os.path.join(output_dir, "plots", _get_experiment_dir_name(topo, mu, gen_type, proc_type, cores, ctx_cost))
+        plot_filename = os.path.join(exp_plot_dir, f"stime_cdf_{label_suffix}.png")
+        util.plot_cdf(df['ServiceTime'], plot_filename, title=f"Service Time CDF{label_suffix}", xlabel="Service Time (us)", ylabel="CDF")
+
 def plot_experiment_results(topo, mu, gen_type, proc_type, cores, ctx_cost, output_dir=".", load_level=0.8):
     """
     Main function to plot all relevant results for a given experiment configuration.
@@ -201,10 +220,12 @@ def plot_experiment_results(topo, mu, gen_type, proc_type, cores, ctx_cost, outp
     _plot_summary_data(summary_load_csv, topo, mu, gen_type, proc_type, cores, ctx_cost, output_dir, is_quantum_sweep=False)
     _plot_summary_data(summary_quantum_csv, topo, mu, gen_type, proc_type, cores, ctx_cost, output_dir, is_quantum_sweep=True, load_level=load_level)
 
+
     # Plot detailed data (scatter and CDFs)
     if all_detailed_csvs:
         # Determine if it's a quantum sweep or load sweep for detailed plots
         is_quantum_sweep_detailed = any("quantum" in os.path.basename(f) for f in all_detailed_csvs)
+        _plot_service_time(all_detailed_csvs, topo, mu, gen_type, proc_type, cores, ctx_cost, output_dir, is_quantum_sweep=is_quantum_sweep_detailed)
         _plot_detailed_scatter(all_detailed_csvs, topo, mu, gen_type, proc_type, cores, ctx_cost, output_dir, is_quantum_sweep=is_quantum_sweep_detailed, load_level=load_level)
         _plot_detailed_cdfs(all_detailed_csvs, topo, mu, gen_type, proc_type, cores, ctx_cost, output_dir, is_quantum_sweep=is_quantum_sweep_detailed, load_level=load_level)
     else:
