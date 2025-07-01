@@ -7,6 +7,18 @@ import (
 	"github.com/epfl-dcsl/schedsim/topologies"
 )
 
+func GetWorkloadPath(wl string) string {
+	fmt.Printf("GetWorkloadPath(): Workload: %v\n", wl)
+	switch wl {
+	case "":
+		return ""
+	case "w4":
+		return "homa-size-distributions/Facebook_HadoopDist_All.txt"
+	default:
+		panic("Unknown workload: " + wl)
+	}
+}
+
 func main() {
 	var topo = flag.Int("topo", 0, "topology selector")
 	var mu = flag.Float64("mu", 0.02, "mu service rate [reqs/us]") // default 50usec
@@ -18,12 +30,17 @@ func main() {
 	var quantum = flag.Float64("quantum", 10.0, "time sharing processor quantum [us]")
 	var cores = flag.Int("cores", 1, "number of processor cores")
 	var ctxCost = flag.Float64("ctxCost", 0.0, "absolute context switch cost [us]")
+	var cdfWorkload = flag.String("cdfWorkload", "", "path to CDF workload file to draw processing times")
 
 	flag.Parse()
+
+	var path = GetWorkloadPath(*cdfWorkload)
+	fmt.Printf("Workload path: %v\n", path)
+
 	fmt.Printf("Selected topology: %v\n", *topo)
 
 	if *topo == 0 {
-		topologies.SingleQueue(*lambda, *mu, *duration, *genType, *procType, *quantum, *cores, *ctxCost)
+		topologies.SingleQueue(*lambda, *mu, *duration, *genType, *procType, *quantum, *cores, *ctxCost, path)
 	} else if *topo == 1 {
 		topologies.MultiQueue(*lambda, *mu, *duration, *genType, *procType, *quantum, *cores, *ctxCost)
 	} else if *topo == 2 {

@@ -6,3 +6,5 @@ schedsim
 *.csv
 plots
 .vscode
+data
+__pycache__

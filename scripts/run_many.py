@@ -4,22 +4,14 @@ import fire
 import os
 import sys
 import subprocess
-from multiprocessing import Process
-from enum import Enum, auto
 import csv
-import re # For parsing detailed output
 from pprint import pprint
-
-# Only written for single Q
-load_levels = [0.01, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.99]
-# Add quantums to sweep for TS processors
-quantums_to_sweep = [500.0]
-# quantums_to_sweep = [1.0, 5.0, 10.0, 20.0, 50.0, 100.0, 500.0]
-metrics = ['Count', 'Stolen', 'AVG', 'STDDev',
-           '50th', '90th', '95th', '99th', 'Reqs/time_unit']
 
 # Import the plotting function
 from plot_csv import plot_experiment_results
+from common import *
+import util
+
 
 def _extract_detailed_data(raw_output_content):
     """
@@ -51,33 +43,33 @@ def _extract_detailed_data(raw_output_content):
     return header, data_rows
 
 
-def run(topo, mu, gen_type, proc_type, cores, ctx_cost=0.0, output_dir=".", duration=20000000):
+
+def run(prm: SimParams):
     '''
     Runs a sweep over different load levels for a fixed configuration.
     mu in us
     output_dir: Directory to save raw output files.
     '''
-    service_time_per_core_us = 1 / mu
+    service_time_per_core_us = 1 / prm.mu
     rps_capacity_per_core = 1 / service_time_per_core_us * 1000.0 * 1000.0
-    total_rps_capacity = rps_capacity_per_core * cores
-    injected_rps = [load_lvl * total_rps_capacity for load_lvl in load_levels]
+    total_rps_capacity = rps_capacity_per_core * prm.cores
+    injected_rps = [load_lvl * total_rps_capacity for load_lvl in prm.load_levels]
     lambdas = [rps / 1000.0 / 1000.0 for rps in injected_rps]
-    res_file = os.path.join(output_dir, "out.txt")
-    os.makedirs(output_dir, exist_ok=True)
+    res_file = prm.get_raw_outfile()
+    os.makedirs(prm.output_dir, exist_ok=True)
+
     with open(res_file, 'w') as f:
         for l in sorted(lambdas): # Sort lambdas for consistent output order
-            cmd = f"./schedsim --topo={topo} --mu={mu} --genType={gen_type} --procType={proc_type} --lambda={l} --cores={cores} --ctxCost={ctx_cost} --duration={duration}"
-            if proc_type == 2:
-                cmd += " --quantum=10.0"  # Use default quantum for load sweeps
-            print(f"Running... {cmd}")
-            result = subprocess.run(cmd, capture_output=True, text=True, shell=True)
-            f.write(result.stdout) # Write raw output to file
+            prm.lmd = l
+            cmd = prm.form_command()
+            stdout = util.run_cmd(cmd)
+            f.write(stdout) # Write raw output to file
 
             # --- Generate detailed CSV for THIS run ---
-            raw_output_content = result.stdout
+            raw_output_content = stdout
             detailed_header, detailed_rows = _extract_detailed_data(raw_output_content)
             if detailed_header and detailed_rows:
-                detailed_out_file = os.path.join(output_dir, f"detailed_latency_load_topo{topo}_mu{mu}_gen{gen_type}_proc{proc_type}_cores{cores}_ctx{ctx_cost}_lambda{l:.4f}.csv")
+                detailed_out_file = prm.form_detailed_outfile()
                 with open(detailed_out_file, 'w', newline='') as f_detailed:
                     writer = csv.writer(f_detailed)
                     writer.writerow(detailed_header)
@@ -87,7 +79,7 @@ def run(topo, mu, gen_type, proc_type, cores, ctx_cost=0.0, output_dir=".", dura
     # --- Start of merged CSV logic for SUMMARY ---
     print(f"Processing {res_file} into summary CSV...")
     results = {}
-    out_file = os.path.join(output_dir, f"load_topo{topo}_mu{mu}_gen{gen_type}_proc{proc_type}_cores{cores}_ctx{ctx_cost}.csv")
+    out_file = prm.form_outfile()
     with open(res_file, 'r') as f:
         csv_reader = csv.reader(f, delimiter='\t')
         rate = 0
@@ -101,7 +93,7 @@ def run(topo, mu, gen_type, proc_type, cores, ctx_cost=0.0, output_dir=".", dura
                     results[rate][metric] = row[i]
             next_is_res = "Count" == row[0]
 
-    pprint(results)
+    # pprint(results)
 
     with open(out_file, 'w') as f:
         writer = csv.writer(f, delimiter=',')
@@ -110,39 +102,42 @@ def run(topo, mu, gen_type, proc_type, cores, ctx_cost=0.0, output_dir=".", dura
             writer.writerow(
                 [rate, results[rate]['50th'], results[rate]['99th']])
     print(f"CSV saved to {out_file}")
-    plot_experiment_results(topo, mu, gen_type, proc_type, cores, ctx_cost, output_dir)
+    plot_experiment_results(prm)
 
 
-def run_quantum_sweep(topo, mu, gen_type, proc_type, cores, load_level=0.8, ctx_cost=0.0, output_dir=".", duration=20000000):
+def run_quantum_sweep(prm: SimParams):
     '''
     Runs schedsim for a fixed load level, sweeping over quantum sizes.
     mu in us
     load_level is the target system load (e.g., 0.8 for 80%)
     '''
-    if proc_type != 2:
+    if prm.proc_type != 2:
         print("Error: Quantum sweep is only meaningful for procType=2 (Time Sharing).", file=sys.stderr)
         sys.exit(1)
 
-    service_time_per_core_us = 1 / mu
-    rps_capacity_per_core = 1 / service_time_per_core_us * 1000.0 * 1000.0
-    total_rps_capacity = rps_capacity_per_core * cores
-    injected_rps = load_level * total_rps_capacity
-    l = injected_rps / 1000.0 / 1000.0
+    if prm.load_level is None:
+        raise ValueError("Must set load_level for quantum sweep")
 
-    res_file = os.path.join(output_dir, "out_quantum.txt")
-    os.makedirs(output_dir, exist_ok=True)
+    service_time_per_core_us = 1 / prm.mu
+    rps_capacity_per_core = 1 / service_time_per_core_us * 1000.0 * 1000.0
+    total_rps_capacity = rps_capacity_per_core * prm.cores
+    injected_rps = prm.load_level * total_rps_capacity
+    l = injected_rps / 1000.0 / 1000.0
+    prm.lmd = l
+
+    res_file = prm.get_raw_outfile()
     with open(res_file, 'w') as f:
-        for q in quantums_to_sweep:
-            cmd = f"./schedsim --topo={topo} --mu={mu} --genType={gen_type} --procType={proc_type} --lambda={l} --quantum={q} --cores={cores} --ctxCost={ctx_cost} --duration={duration}"
-            print(f"Running... {cmd}")
-            result = subprocess.run(cmd, capture_output=True, text=True, shell=True)
-            f.write(result.stdout) # Write raw output to file
+        for q in prm.quantums_to_sweep:
+            prm.quantum_us = q
+            stdout = util.run_cmd(prm.form_command())
+            
+            f.write(stdout) # Write raw output to file
     
             # --- Generate detailed CSV for THIS run ---
-            raw_output_content = result.stdout
+            raw_output_content = stdout
             detailed_header, detailed_rows = _extract_detailed_data(raw_output_content)
             if detailed_header and detailed_rows:
-                detailed_out_file = os.path.join(output_dir, f"detailed_latency_quantum_topo{topo}_mu{mu}_gen{gen_type}_proc{proc_type}_cores{cores}_load{load_level}_ctx{ctx_cost}_quantum{q}.csv")
+                detailed_out_file = prm.form_detailed_outfile()
                 with open(detailed_out_file, 'w', newline='') as f_detailed:
                     writer = csv.writer(f_detailed)
                     writer.writerow(detailed_header)
@@ -152,7 +147,7 @@ def run_quantum_sweep(topo, mu, gen_type, proc_type, cores, load_level=0.8, ctx_
     # --- Start of merged CSV logic for SUMMARY ---
     print(f"Processing {res_file} into summary CSV...")
     results = {}
-    out_file = os.path.join(output_dir, f"quantum_topo{topo}_mu{mu}_gen{gen_type}_proc{proc_type}_cores{cores}_load{load_level}_ctx{ctx_cost}.csv")
+    out_file = prm.form_outfile()
     with open(res_file, 'r') as f:
         csv_reader = csv.reader(f, delimiter='\t')
         quantum = 0
@@ -166,7 +161,7 @@ def run_quantum_sweep(topo, mu, gen_type, proc_type, cores, load_level=0.8, ctx_
                     results[quantum][metric] = row[i]
             next_is_res = "Count" == row[0]
 
-    pprint(results)
+    # pprint(results)
 
     with open(out_file, 'w') as f:
         writer = csv.writer(f, delimiter=',')
@@ -175,12 +170,37 @@ def run_quantum_sweep(topo, mu, gen_type, proc_type, cores, load_level=0.8, ctx_
             writer.writerow(
                 [quantum, results[quantum]['50th'], results[quantum]['99th']])
     print(f"CSV saved to {out_file}")
-    plot_experiment_results(topo, mu, gen_type, proc_type, cores, ctx_cost, output_dir, load_level=load_level)
+    plot_experiment_results(prm)
 
 
+def run_any(cmd: str, **kwargs):
+    args = kwargs
+    if "mu" not in args:
+        if "cdfWorkload" not in args:
+            raise ValueError("Must set mu or cdfWorkload")
+        if args["gen_type"] != 5:
+            raise ValueError("CDF only valid with gentype 5")
+
+        wl = args["cdfWorkload"]
+        meansz = -1.0  # CAREFUL: MUST DIVIDE BY SAME AMOUNT AS adv_generators.go does when reading CDF
+        if wl == "w4":
+            meansz = 127796.6
+        else:
+            raise ValueError(f"Unknown workload: {wl}")
+        meansz /= 100.0
+        # meansz now reflects the mean service time in us
+        args["mu"] = 1.0 / meansz
+
+    params = SimParams(**args)
+    
+    if cmd == "run":
+        params.sweep_type = SweepType.LOAD_SWEEP
+        run(params)
+    elif cmd == "run_quantum":
+        params.sweep_type = SweepType.QUANTUM_SWEEP
+        run_quantum_sweep(params)
+    else:
+        raise ValueError(f"Unknown command: {cmd}")
 
 if __name__ == "__main__":
-    fire.Fire({
-        "run": run,
-        "run_quantum": run_quantum_sweep,
-    })
+    fire.Fire(run_any)

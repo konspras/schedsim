@@ -3,6 +3,18 @@ import numpy as np
 import matplotlib.pyplot as plt
 from typing import Optional
 import os
+import subprocess
+
+def run_cmd(cmd: str):
+    print(f"Running... {cmd}")
+    result = subprocess.run(cmd, capture_output=True, text=True, shell=True)
+    if result.returncode != 0:
+        print("Command failed!")
+        print("stdout:", result.stdout)
+        print("stderr:", result.stderr)
+        # raise your own exception if you like:
+        raise RuntimeError(f"Command {cmd!r} exited with {result.returncode}")
+    return result.stdout
 
 def plot_cdf(
     data_series: pd.Series,
@@ -11,6 +23,7 @@ def plot_cdf(
     xlabel: str = "Value",
     ylabel: str = "Cumulative Probability",
     ax: Optional[plt.Axes] = None,
+    xlog = False,
 ) -> None:
     """
     Plots the Cumulative Distribution Function (CDF) of a pandas Series.
@@ -43,6 +56,9 @@ def plot_cdf(
 
     # Plot the CDF
     ax.plot(data_sorted, y_cdf)
+
+    if xlog:
+        ax.set_xscale("log")
 
     # Set plot properties
     ax.set_title(title)
