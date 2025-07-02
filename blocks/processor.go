@@ -75,6 +75,36 @@ func (p *TSProcessor) Run() {
 	}
 }
 
+// SrptTSProcessor is a time sharing processor that implements the SRPT policy.
+// It processes a request for a quantum, and if not finished, re-enqueues it.
+// It relies on being connected to a Priority Queue that sorts requests by
+// their remaining service time.
+type SrptTSProcessor struct {
+	genericProcessor
+	quantum float64
+}
+
+// NewSrptTSProcessor returns a new *SrptTSProcessor
+func NewSrptTSProcessor(quantum, ctxCost float64) *SrptTSProcessor {
+	return &SrptTSProcessor{quantum: quantum, genericProcessor: genericProcessor{ctxCost: ctxCost}}
+}
+
+// Run is the main processor loop
+func (p *SrptTSProcessor) Run() {
+	for {
+		req := p.ReadInQueue()
+
+		if req.GetServiceTime() <= p.quantum {
+			p.Wait(req.GetServiceTime() + p.ctxCost)
+			p.reqDrain.TerminateReq(req)
+		} else {
+			p.Wait(p.quantum + p.ctxCost)
+			req.SubServiceTime(p.quantum)
+			p.WriteInQueue(req)
+		}
+	}
+}
+
 // PSProcessor is a processor sharing processor
 type PSProcessor struct {
 	genericProcessor

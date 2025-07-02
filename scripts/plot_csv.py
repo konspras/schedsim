@@ -145,6 +145,63 @@ def _plot_detailed_cdfs(csv_files, prm: SimParams):
             #     print(f"No data for {plot_filename_prefix} plot (P{p_val}+ Delay).")
             plt.close()
 
+def _plot_detailed_slowdown_cdfs(csv_files, prm: SimParams):
+    """Plots CDFs of Slowdown (overall and tail)."""
+    if not csv_files:
+        raise ValueError(f"csv_files not found: {csv_files}", file=sys.stderr)
+
+    exp_plot_dir = prm.get_plot_dir()
+    os.makedirs(exp_plot_dir, exist_ok=True)
+
+    percentiles_to_plot = [0, 80, 95, 99] # 0th percentile means overall CDF
+
+    for p_val in percentiles_to_plot:
+        plt.figure(figsize=(10, 7))
+        all_empty_filtered = True
+        
+        for csv_file in csv_files:
+            id = csv_file.split("/")[-1].split(".csv")[0]
+            df = pd.read_csv(csv_file)
+            
+            # Calculate slowdown, handling potential division by zero.
+            # A ServiceTime of 0 would result in infinite slowdown.
+            df['Slowdown'] = df['Delay'] / df['ServiceTime']
+            df.replace([np.inf, -np.inf], np.nan, inplace=True)
+            df.dropna(subset=['Slowdown'], inplace=True)
+
+            slowdown_data = df['Slowdown']
+            
+            if p_val > 0:
+                # Filter based on the percentile of Slowdown itself
+                slowdown_threshold = slowdown_data.quantile(p_val / 100.0)
+                filtered_data = slowdown_data[slowdown_data >= slowdown_threshold]
+                plot_label_suffix = f" (Slowdown >= P{p_val})"
+                plot_filename_prefix = f"p{p_val}_slowdown_cdf"
+            else: # 0th percentile means no filtering
+                filtered_data = slowdown_data
+                plot_label_suffix = ""
+                plot_filename_prefix = "overall_slowdown_cdf"
+
+            if not filtered_data.empty:
+                all_empty_filtered = False
+                data_sorted = filtered_data.sort_values()
+                y_cdf = np.arange(1, len(data_sorted) + 1) / len(data_sorted)
+                
+                label_prefix = f"ID={id}"
+                plt.plot(data_sorted, y_cdf, label=f"{label_prefix}{plot_label_suffix}")
+
+        if not all_empty_filtered:
+            plt.xlabel('Slowdown (Delay / Service Time)')
+            plt.ylabel("CDF")
+            title_params = prm.get_title_params()
+            plt.title(f"CDF of Slowdown (P{p_val}+) ({title_params})" if p_val > 0 else f"Overall CDF of Slowdown ({title_params})")
+            plt.grid(True, which="both", ls="--")
+            plt.legend()
+            plot_filename = os.path.join(exp_plot_dir, f"{plot_filename_prefix}.png")
+            plt.savefig(plot_filename)
+            print(f"Saved {plot_filename_prefix} plot to {plot_filename}")
+            plt.close()
+
 def _plot_service_time(csv_files, prm: SimParams):
     """Plots the service time CDF."""
     if not csv_files:
@@ -187,5 +244,6 @@ def plot_experiment_results(prm: SimParams):
         _plot_service_time(all_detailed_csvs, prm)
         _plot_detailed_scatter(all_detailed_csvs, prm)
         _plot_detailed_cdfs(all_detailed_csvs, prm)
+        _plot_detailed_slowdown_cdfs(all_detailed_csvs, prm)
     else:
         print("No detailed CSVs found to plot scatter or CDFs.", file=sys.stderr)

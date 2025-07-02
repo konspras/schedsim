@@ -111,7 +111,7 @@ def run_quantum_sweep(prm: SimParams):
     mu in us
     load_level is the target system load (e.g., 0.8 for 80%)
     '''
-    if prm.proc_type != 2:
+    if prm.proc_type != 2 and prm.proc_type != 3:
         print("Error: Quantum sweep is only meaningful for procType=2 (Time Sharing).", file=sys.stderr)
         sys.exit(1)
 

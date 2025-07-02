@@ -29,6 +29,17 @@ func (r Request) GetServiceTime() float64 {
 	return r.ServiceTime
 }
 
+// GetCmpVal returns the value to be used for comparison in a priority queue.
+// For SRPT, this is the remaining service time.
+func (r Request) GetCmpVal() float64 {
+	return r.ServiceTime
+}
+
+// GetInitTime returns the request's creation time.
+func (r Request) GetInitTime() float64 {
+	return r.InitTime
+}
+
 // SubServiceTime reduces service time by t
 func (r *Request) SubServiceTime(t float64) {
 	r.ServiceTime -= t
