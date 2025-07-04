@@ -8,3 +8,10 @@ python3 ./scripts/run_many.py run_quantum --topo=0 --gen_type=5 --proc_type=3 --
 python3 ./scripts/run_many.py run_quantum --topo=0 --gen_type=4 --proc_type=3 --cores=1 --load_level=0.9 --ctx_cost=0.0 --duration=20000000 --mu=0.000782493
 Fixed S
 python3 ./scripts/run_many.py run_quantum --topo=0 --gen_type=1 --proc_type=3 --cores=1 --load_level=0.9 --ctx_cost=0.0 --duration=20000000 --mu=0.000782493
+GPT3B
+python3 ./scripts/run_many.py run_quantum --topo=0 --gen_type=5 --proc_type=3 --cores=1 --load_level=0.9 --ctx_cost=0.0 --cdfWorkload GPT3B --duration=20000000
+
+
+// Trying to adjust durations and sizes
+python3 ./scripts/run_many.py run_quantum --topo=0 --gen_type=5 --proc_type=3 --cores=1 --load_level=0.9 --ctx_cost=0.0 --cdfWorkload=GPT3B --duration=2000000000
+python3 ./scripts/run_many.py run_quantum --topo=0 --gen_type=5 --proc_type=3 --cores=1 --load_level=0.9 --ctx_cost=0.0 --cdfWorkload=w4 --duration=20000000

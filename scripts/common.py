@@ -49,7 +49,7 @@ class SimParams:
     load_levels = [0.01, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.99]
     # Add quantums to sweep for TS processors
     # quantums_to_sweep = [20.0]
-    quantums_to_sweep = [1.0, 10.0, 50.0, 100.0, 500.0, 5000.0]
+    quantums_to_sweep = [0.1, 1.0, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000.0*1000.0, 10.0*1000.0*1000.0, 100.0*1000.0*1000.0, 1000.0*1000.0*1000.0]
 
     def validate(self):
         missing = [k for k, v in asdict(self).items() if v is None]
@@ -78,7 +78,7 @@ class SimParams:
 
     def get_experiment_dirname(self):
         self.validate()
-        d = os.path.join(self.output_dir, f"topo{self.topo}_mu{self.mu}_gen{self.gen_type}_proc{self.proc_type}_cores{self.cores}_ctx{self.ctx_cost}_lambda{self.lmd:.4f}")
+        d = os.path.join(self.output_dir, f"topo{self.topo}_mu{self.mu}_gen{self.gen_type}_prc{self.proc_type}_c{self.cores}_ctx{self.ctx_cost}_wl{self.cdfWorkload}_dur{self.duration}_{self.sweep_type.name}")
         os.makedirs(d, exist_ok=True)
         return d
 

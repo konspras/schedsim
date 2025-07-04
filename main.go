@@ -12,8 +12,14 @@ func GetWorkloadPath(wl string) string {
 	switch wl {
 	case "":
 		return ""
+	case "w3":
+		return "homa-size-distributions/Google_AllRPC.txt"
 	case "w4":
 		return "homa-size-distributions/Facebook_HadoopDist_All.txt"
+	case "w5":
+		return "homa-size-distributions/DCTCP_MsgSizeDistBytes.txt"
+	case "GPT3B":
+		return "homa-size-distributions/GPT3B.txt"
 	default:
 		panic("Unknown workload: " + wl)
 	}

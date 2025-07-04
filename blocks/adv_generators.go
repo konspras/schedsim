@@ -145,7 +145,7 @@ func NewCDFGenerator(lambda float64, path string) *CDFGenerator {
 		// eg w5 goes to 10M+ which is 10 seconds (and starts at 1 byte==1us)
 		// so I will divide by 10 (0.1us to 1s)
 		// Or by 1000 (0.001us to 0.001s==1ms==1000us)
-		cd.x = append(cd.x, xVal/100.0)
+		cd.x = append(cd.x, xVal/1000.0)
 		cd.p = append(cd.p, pVal)
 	}
 	if len(cd.x) == 0 {

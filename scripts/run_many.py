@@ -111,66 +111,98 @@ def run_quantum_sweep(prm: SimParams):
     mu in us
     load_level is the target system load (e.g., 0.8 for 80%)
     '''
-    if prm.proc_type != 2 and prm.proc_type != 3:
+    # only TS and Fair sharing make sense for quantum sweeps
+    if prm.proc_type not in (2, 3):
         print("Error: Quantum sweep is only meaningful for procType=2 (Time Sharing).", file=sys.stderr)
         sys.exit(1)
 
     if prm.load_level is None:
         raise ValueError("Must set load_level for quantum sweep")
 
-    service_time_per_core_us = 1 / prm.mu
-    rps_capacity_per_core = 1 / service_time_per_core_us * 1000.0 * 1000.0
+    # compute injected arrival rate
+    service_time_per_core_us = 1/prm.mu
+    rps_capacity_per_core = 1/service_time_per_core_us * 1e6
     total_rps_capacity = rps_capacity_per_core * prm.cores
     injected_rps = prm.load_level * total_rps_capacity
-    l = injected_rps / 1000.0 / 1000.0
-    prm.lmd = l
+    prm.lmd = injected_rps / 1e6
 
+    # run all quantums, saving raw stdout
     res_file = prm.get_raw_outfile()
     with open(res_file, 'w') as f:
         for q in prm.quantums_to_sweep:
             prm.quantum_us = q
             stdout = util.run_cmd(prm.form_command())
-            
-            f.write(stdout) # Write raw output to file
-    
-            # --- Generate detailed CSV for THIS run ---
-            raw_output_content = stdout
-            detailed_header, detailed_rows = _extract_detailed_data(raw_output_content)
+            f.write(stdout)
+
+            # extract detailed CSV for this run
+            detailed_header, detailed_rows = _extract_detailed_data(stdout)
             if detailed_header and detailed_rows:
                 detailed_out_file = prm.form_detailed_outfile()
-                with open(detailed_out_file, 'w', newline='') as f_detailed:
-                    writer = csv.writer(f_detailed)
+                with open(detailed_out_file, 'w', newline='') as f_d:
+                    writer = csv.writer(f_d)
                     writer.writerow(detailed_header)
                     writer.writerows(detailed_rows)
                 print(f"Detailed latency CSV saved to {detailed_out_file}")
 
-    # --- Start of merged CSV logic for SUMMARY ---
+    # --- merge into summary CSV ---
     print(f"Processing {res_file} into summary CSV...")
     results = {}
     out_file = prm.form_outfile()
     with open(res_file, 'r') as f:
         csv_reader = csv.reader(f, delimiter='\t')
-        quantum = 0
+        quantum = None
         next_is_res = False
+
         for row in csv_reader:
+            # detect start of a new quantum block
             if len(row) >= 4 and "quantum" in row[3]:
-                quantum = row[3].split(":")[1]
+                quantum = row[3].split(":", 1)[1]
                 results[quantum] = {}
+
+            # if the previous row was "Count", this row has the delay metrics
             if next_is_res:
                 for i, metric in enumerate(metrics):
                     results[quantum][metric] = row[i]
-            next_is_res = "Count" == row[0]
+                # capture the mean (AVG) delay
+                results[quantum]['MeanDelay'] = results[quantum].get('AVG', '')
 
-    # pprint(results)
+            # catch the slowdown line
+            if len(row) > 1 and row[0] == "Slowdown":
+                # row indices: 0="Slowdown", 1<empty>, 2=AVG,3=STDDev,4=50th,5=90th,6=95th,7=99th
+                results[quantum]['MeanSlowdown'] = row[2]
+                results[quantum]['50th_sldn']   = row[4]
+                results[quantum]['99th_sldn']   = row[7]
 
-    with open(out_file, 'w') as f:
+            # mark if next line is the delay metrics
+            next_is_res = (row[0] == "Count")
+
+    # write out summary with mean delay & slowdown, plus percentiles
+    with open(out_file, 'w', newline='') as f:
         writer = csv.writer(f, delimiter=',')
-        writer.writerow(['Quantum', '50th', '99th'])
-        for quantum in sorted(results.keys(), key=float):
-            writer.writerow(
-                [quantum, results[quantum]['50th'], results[quantum]['99th']])
+        writer.writerow([
+            'Quantum',
+            'MeanDelay',
+            'MeanSlowdown',
+            '50th',
+            '99th',
+            '50th_sldn',
+            '99th_sldn',
+        ])
+        for q in sorted(results.keys(), key=float):
+            r = results[q]
+            writer.writerow([
+                q,
+                r.get('MeanDelay', ''),
+                r.get('MeanSlowdown', ''),
+                r.get('50th', ''),
+                r.get('99th', ''),
+                r.get('50th_sldn', ''),
+                r.get('99th_sldn', ''),
+            ])
+
     print(f"CSV saved to {out_file}")
     plot_experiment_results(prm)
+
 
 
 def run_any(cmd: str, **kwargs):
@@ -183,11 +215,17 @@ def run_any(cmd: str, **kwargs):
 
         wl = args["cdfWorkload"]
         meansz = -1.0  # CAREFUL: MUST DIVIDE BY SAME AMOUNT AS adv_generators.go does when reading CDF
-        if wl == "w4":
+        if wl == "w3":
+            meansz = 2927.354
+        elif wl == "w4":
             meansz = 127796.6
+        elif wl == "w5":
+            meansz = 2617050
+        elif wl == "GPT3B":
+            meansz = 125840000
         else:
             raise ValueError(f"Unknown workload: {wl}")
-        meansz /= 100.0
+        meansz /= 1000.0
         # meansz now reflects the mean service time in us
         args["mu"] = 1.0 / meansz
 

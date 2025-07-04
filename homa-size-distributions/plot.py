@@ -137,7 +137,7 @@ def plot_workload_cdfs(cdf_files: List[str], output_base_filename: str = "worklo
     ax.set_xscale('log')  # Log scale is standard for flow sizes
     ax.set_ylim(0, 1.05)
     ax.grid(True, which="both", ls="--", linewidth=0.6)
-    ax.legend(fontsize=FIGURE_FONT_SZ)
+    ax.legend(fontsize=LEGEND_FONTSIZE_7)
     plt.xticks(fontsize=FIGURE_FONT_SZ)
     plt.yticks(fontsize=FIGURE_FONT_SZ)
 

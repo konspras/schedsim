@@ -97,21 +97,72 @@ func (k *AllKeeper) getPercentiles() map[float64]float64 {
 	return res
 }
 
+func (k *AllKeeper) slowdownAvg() float64 {
+	var sum float64
+	for _, item := range k.items {
+		sum += item.Delay / item.ServiceTime
+	}
+	return sum / float64(len(k.items))
+}
+
+func (k *AllKeeper) slowdownStd() float64 {
+	avg := k.slowdownAvg()
+	var sumSq float64
+	for _, item := range k.items {
+		d := item.Delay / item.ServiceTime
+		sumSq += (d - avg) * (d - avg)
+	}
+	return math.Sqrt(sumSq / float64(len(k.items)))
+}
+
+func (k *AllKeeper) slowdownPercentiles() map[float64]float64 {
+	// collect all slowdowns
+	slows := make([]float64, len(k.items))
+	for i, item := range k.items {
+		slows[i] = item.Delay / item.ServiceTime
+	}
+	sort.Float64s(slows)
+
+	res := make(map[float64]float64)
+	for _, p := range []float64{0.5, 0.9, 0.95, 0.99} {
+		idx := int(float64(len(slows)) * p)
+		if idx >= len(slows) {
+			idx = len(slows) - 1
+		}
+		res[p] = slows[idx]
+	}
+	return res
+}
+
 // PrintStats prints the collected statistics at the end of the similation.
 // This is called by the model
 func (k *AllKeeper) PrintStats() {
 	fmt.Printf("Stats collector: %v\n", k.name)
+	// header for delay
 	fmt.Printf("Count\tStolen\tAVG\tSTDDev\t50th\t90th\t95th\t99th\tReqs/time_unit\n")
-	fmt.Printf("%v\t%v\t%v\t%v\t", len(k.items), k.stolenCount, k.avg(), k.std())
 
-	vals := []float64{0.5, 0.9, 0.95, 0.99}
+	// delay row
+	fmt.Printf("%d\t%d\t%v\t%v\t",
+		len(k.items), k.stolenCount, k.avg(), k.std(),
+	)
 	if len(k.items) > 0 {
-		percentiles := k.getPercentiles()
-		for _, v := range vals {
-			fmt.Printf("%v\t", percentiles[v])
+		pct := k.getPercentiles()
+		for _, p := range []float64{0.5, 0.9, 0.95, 0.99} {
+			fmt.Printf("%v\t", pct[p])
 		}
 	}
 	fmt.Printf("%v\n", float64(len(k.items))/engine.GetTime())
+
+	// slowdown header & row
+	fmt.Printf("Slowdown\t\t%v\t%v\t", k.slowdownAvg(), k.slowdownStd())
+	if len(k.items) > 0 {
+		spct := k.slowdownPercentiles()
+		for _, p := range []float64{0.5, 0.9, 0.95, 0.99} {
+			fmt.Printf("%v\t", spct[p])
+		}
+	}
+	fmt.Println() // end slowdown row
+
 	k.PrintDetailedLatencyVsServiceTime()
 }
 
