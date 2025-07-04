@@ -144,7 +144,7 @@ def plot_column(dataframes,
     plt.xlabel('Scheduling Quantum (KB)')
     plt.ylabel("Normalized Mean\nSlowdown")
     plt.grid(True, which='both', linestyle='--', linewidth=0.5)
-    plt.legend(loc='center right',)
+    plt.legend(loc='upper left', frameon=False, ncols=2)
 
     # Save
     base = Path(out_dir) / f"quantum_{column.replace(' ', '_')}_norm"
