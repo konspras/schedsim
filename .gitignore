@@ -3,8 +3,6 @@
 *.dat
 schedsim
 *.txt
-*.csv
-plots
 .vscode
-data
+detailed
 __pycache__
