@@ -167,6 +167,7 @@ def main():
         'W2':  f"{cmn_pref}/topo0_mu0.007824934309676469_gen5_prc3_c1_ctx0.0_wlw4_dur20000000_QUANTUM_SWEEP/data/summary.csv",
         'W3':  f"{cmn_pref}/topo0_mu0.0003821096272520586_gen5_prc3_c1_ctx0.0_wlw5_dur20000000_QUANTUM_SWEEP/data/summary.csv",
         'W4': f"{cmn_pref}/topo0_mu7.946598855689765e-06_gen5_prc3_c1_ctx0.0_wlGPT3B_dur2000000000_QUANTUM_SWEEP/data/summary.csv",
+        'W5': f"{cmn_pref}/topo0_ll0.9_mu3.938372349475409e-06_gen5_prc3_c1_ctx0.0_wlGPT3_adel_dur2000000000_QUANTUM_SWEEP/data/summary.csv",
     }
 
     # Load CSVs

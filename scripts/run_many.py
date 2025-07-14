@@ -223,6 +223,8 @@ def run_any(cmd: str, **kwargs):
             meansz = 2617050
         elif wl == "GPT3B":
             meansz = 125840000
+        elif wl == "GPT3_adel":
+            meansz = 253912000
         else:
             raise ValueError(f"Unknown workload: {wl}")
         meansz /= 1000.0

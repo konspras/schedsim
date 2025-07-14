@@ -20,6 +20,8 @@ func GetWorkloadPath(wl string) string {
 		return "homa-size-distributions/DCTCP_MsgSizeDistBytes.txt"
 	case "GPT3B":
 		return "homa-size-distributions/GPT3B.txt"
+	case "GPT3_adel":
+		return "homa-size-distributions/GPT3_Adel.txt"
 	default:
 		panic("Unknown workload: " + wl)
 	}
